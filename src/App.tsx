@@ -102,10 +102,11 @@ function QuestionResult({ question, userOptionIndex, questionIndex }: QuestionRe
 interface ResultsProps {
   questions: Question[]
   choices: number[]
+  duration: number
   onTakeAnotherQuiz: () => void
 }
 
-function Results({ questions, choices, onTakeAnotherQuiz }: ResultsProps) {
+function Results({ questions, choices, duration, onTakeAnotherQuiz }: ResultsProps) {
   let score = 0
   let questionResults = []
   for (let i = 0; i < questions.length; i++) {
@@ -114,13 +115,21 @@ function Results({ questions, choices, onTakeAnotherQuiz }: ResultsProps) {
     }
     questionResults.push(<QuestionResult key={i} question={questions[i]} userOptionIndex={choices[i]} questionIndex={i}/>)
   }
+
+  let timeString = ''
+  if (duration >= 60000) {
+    timeString += `${Math.floor(duration / 60000)}m `
+  }
+  timeString += `${Math.floor(duration / 1000) % 60}s`
+
   return (
     <div className="space-y-5">
       <div className="flex justify-between">
         <p className="font-bold text-2xl">Results</p>
         <button onClick={onTakeAnotherQuiz} className="bg-sky-700 text-white px-2 py-1 rounded">Take new quiz</button>
       </div>
-      <p><span className="font-bold">Score:</span> {score}/{questions.length}</p>
+      <p><span className="font-bold">Score:</span> {score}/{questions.length} ({ (score / questions.length >= 0.7) ? "Pass" : "Fail" })</p>
+      <p><span className="font-bold">Time taken:</span> {timeString}</p>
       { questionResults }
     </div>
   )
@@ -135,11 +144,19 @@ function Quiz({ questions, onTakeAnotherQuiz }: QuizProps) {
   let [choices, setChoices] = useState<number[]>([])
   let [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   let [showResult, setShowResult] = useState(false)
+  let [initialQuizTime, setInitialQuizTime] = useState<null|number>(null)
+  let [quizDuration, setQuizDuration] = useState<null|number>(null)
+
+  useEffect(() => {
+    setInitialQuizTime(Date.now())
+    setQuizDuration(null)
+  }, [questions])
 
   function onSelectOption(choice: number) {
     choices.push(choice)
     if (currentQuestionIndex + 1 === questions.length) {
       setShowResult(true)
+      setQuizDuration(Date.now() - (initialQuizTime as number))
     }
     else {
       setCurrentQuestionIndex(currentQuestionIndex + 1)
@@ -149,6 +166,7 @@ function Quiz({ questions, onTakeAnotherQuiz }: QuizProps) {
   if (showResult) {
     return <Results questions={questions} 
                     choices={choices} 
+                    duration={quizDuration as number}
                     onTakeAnotherQuiz={() => {
                       setChoices([])
                       setCurrentQuestionIndex(0)
